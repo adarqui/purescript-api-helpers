@@ -1,8 +1,8 @@
 module Network.Api.Helpers (
   ApiOptions (..),
   ApiEff,
-  class By,
-  by,
+  class QueryParam,
+  qp,
   defaultApiOptions,
   route,
   flattenParams,
@@ -28,7 +28,7 @@ import Data.Either                  (Either(Left, Right))
 import Data.Foreign                 (ForeignError)
 import Data.Maybe                   (maybe)
 import Data.String                  (joinWith, stripSuffix)
-import Data.Tuple                   (Tuple(Tuple))
+import Data.Tuple                   (Tuple, fst, snd)
 import Network.HTTP.Affjax          (AJAX)
 import Network.HTTP.Affjax          as AJ
 import Network.HTTP.Affjax.Request  (class Requestable)
@@ -49,8 +49,8 @@ type ApiEff a = forall eff. ReaderT ApiOptions (Aff (ajax :: AJAX, console :: CO
 
 
 
-class Show a <= By a where
-  by :: a -> String
+class Show a <= QueryParam a where
+  qp :: a -> Tuple String String
 
 
 
@@ -64,9 +64,9 @@ route url paths = joinWith "/" (url `cons` paths)
 
 
 
-flattenParams :: Array (Tuple String String) -> Array String
+flattenParams :: forall qp. QueryParam qp => Array qp -> Array String
 flattenParams [] = []
-flattenParams params = map (\(Tuple k v) -> k <> "=" <> v) params
+flattenParams params = map (\par -> let tup = qp par in fst tup <> "=" <> snd tup) params
 
 
 
@@ -76,10 +76,8 @@ mkQueryString params = "?" <> joinWith "&" params
 
 
 
-routeQueryBy :: forall by. By by => String -> Array String -> Array (Tuple String String) -> Array by -> String
-routeQueryBy url paths params by = route url paths <> mkQueryString (by' <> flattenParams params)
-  where
-  by' = map show by
+routeQueryBy :: forall qp. QueryParam qp => String -> Array String -> Array qp -> String
+routeQueryBy url paths params = route url paths <> mkQueryString (flattenParams params)
 
 
 
@@ -107,15 +105,14 @@ urlFromReader = do
 -- | getAt
 --
 getAt ::
-      forall a by.
-      (Respondable a, By by)
-      => Array (Tuple String String)
-      -> Array by
+      forall a qp.
+      (Respondable a, QueryParam qp)
+      => Array qp
       -> Array String
       -> ApiEff (Either ForeignError a)
-getAt params by paths = do
+getAt params paths = do
   url <- urlFromReader
-  let url' = routeQueryBy url paths params by
+  let url' = routeQueryBy url paths params
   runDebug (liftAff $ log ("getAt: " <> url'))
   { response: response } <- lift $ AJ.get url'
   let r = fromResponse response
@@ -132,16 +129,15 @@ getAt params by paths = do
 -- | postAt
 --
 postAt ::
-       forall a b by.
-       (Respondable a, Requestable b, By by)
-       => Array (Tuple String String)
-       -> Array by
+       forall a b qp.
+       (Respondable a, Requestable b, QueryParam qp)
+       => Array qp
        -> Array String
        -> b
        -> ApiEff (Either ForeignError a)
-postAt params by paths body = do
+postAt params paths body = do
   url <- urlFromReader
-  let url' = routeQueryBy url paths params by
+  let url' = routeQueryBy url paths params
   runDebug (liftAff $ log ("postAt: " <> url'))
   { response: response } <- lift $ AJ.post url' body
   let r = fromResponse response
@@ -159,16 +155,15 @@ postAt params by paths body = do
 -- | updateAt
 --
 putAt ::
-         forall a b by.
-         (Respondable a, Requestable b, By by)
-         => Array (Tuple String String)
-         -> Array by
+         forall a b qp.
+         (Respondable a, Requestable b, QueryParam qp)
+         => Array qp
          -> Array String
          -> b
          -> ApiEff (Either ForeignError a)
-putAt params by paths body = do
+putAt params paths body = do
   url <- urlFromReader
-  let url' = routeQueryBy url paths params by
+  let url' = routeQueryBy url paths params
   runDebug (liftAff $ log ("putAt: " <> url'))
   { response: response } <- lift $ AJ.put url' body
   let r = fromResponse response
@@ -185,15 +180,14 @@ putAt params by paths body = do
 -- | deleteAt
 --
 deleteAt ::
-         forall by.
-         (By by)
-         => Array (Tuple String String)
-         -> Array by
+         forall qp.
+         (QueryParam qp)
+         => Array qp
          -> Array String
          -> ApiEff (Either ForeignError Unit)
-deleteAt params by paths = do
+deleteAt params paths = do
   url <- urlFromReader
-  let url' = routeQueryBy url paths params by
+  let url' = routeQueryBy url paths params
   runDebug (liftAff $ log ("deleteAt: " <> url'))
   { response: response } <- lift $ AJ.delete url'
   let r = fromResponse response
