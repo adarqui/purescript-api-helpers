@@ -1,5 +1,6 @@
 module Network.Api.Helpers (
   ApiOptions (..),
+  ApiError (..),
   ApiEff,
   class QueryParam,
   qp,
@@ -10,6 +11,7 @@ module Network.Api.Helpers (
   routeQueryBy,
   runDebug,
   urlFromReader,
+  handleError,
   getAt,
   postAt,
   putAt,
@@ -37,6 +39,10 @@ import Prelude                      (class Show, Unit, return, ($), bind, show, 
 
 
 
+type ApiEff a = forall eff. ReaderT ApiOptions (Aff (ajax :: AJAX, console :: CONSOLE | eff)) a
+
+
+
 data ApiOptions = ApiOptions {
   apiUrl     :: String,
   apiPrefix  :: String,
@@ -45,7 +51,9 @@ data ApiOptions = ApiOptions {
 
 
 
-type ApiEff a = forall eff. ReaderT ApiOptions (Aff (ajax :: AJAX, console :: CONSOLE | eff)) a
+data ApiError
+  = ServerError ForeignError
+  | DecodeError String
 
 
 
@@ -99,6 +107,12 @@ urlFromReader = do
     apiUrl'    = maybe opts.apiUrl id $ stripSuffix "/" opts.apiUrl
     apiPrefix' = maybe opts.apiPrefix id $ stripSuffix "/" opts.apiPrefix
   return $ apiUrl' <> "/" <> apiPrefix'
+
+
+
+handleError :: forall a. Respondable a => Either ForeignError a -> Either ApiError a
+handleError (Left status) = Left $ ServerError status
+handleError (Right js)    = Right js
 
 
 
