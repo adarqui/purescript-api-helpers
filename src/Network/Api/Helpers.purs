@@ -1,4 +1,4 @@
-module Network.Api.Helpers (
+module Purescript.Api.Helpers (
   ApiOptions (..),
   ApiError (..),
   ApiEff,
