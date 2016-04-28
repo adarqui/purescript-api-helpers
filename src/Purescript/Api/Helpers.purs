@@ -30,12 +30,12 @@ import Data.Either                  (Either(Left, Right))
 import Data.Foreign                 (ForeignError)
 import Data.Maybe                   (maybe)
 import Data.String                  (joinWith, stripSuffix)
-import Data.Tuple                   (Tuple, fst, snd)
+import Data.Tuple                   (Tuple(..), fst, snd)
 import Network.HTTP.Affjax          (AJAX)
 import Network.HTTP.Affjax          as AJ
 import Network.HTTP.Affjax.Request  (class Requestable)
 import Network.HTTP.Affjax.Response (class Respondable, fromResponse)
-import Prelude                      (class Show, Unit, return, ($), bind, show, (++), (<>), unit, map, id)
+import Prelude                      (Unit, return, ($), bind, show, (++), (<>), unit, map, id)
 
 
 
@@ -57,8 +57,13 @@ data ApiError
 
 
 
-class Show a <= QueryParam a where
+class QueryParam a where
   qp :: a -> Tuple String String
+
+
+
+instance tupleBoolQueryParam :: QueryParam Int where
+  qp b = Tuple "bool" (show b)
 
 
 
