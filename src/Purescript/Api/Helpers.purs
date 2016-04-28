@@ -68,7 +68,7 @@ instance tupleBoolQueryParam :: QueryParam Boolean where
 
 
 instance tupleStringQueryParam :: QueryParam (Tuple String String) where
-  qp (Tuple a b) = Tuple a b
+  qp = id
 
 
 
