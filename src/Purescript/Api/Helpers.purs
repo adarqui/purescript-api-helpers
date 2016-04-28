@@ -62,7 +62,7 @@ class QueryParam a where
 
 
 
-instance tupleBoolQueryParam :: QueryParam Int where
+instance tupleBoolQueryParam :: QueryParam Boolean where
   qp b = Tuple "bool" (show b)
 
 
