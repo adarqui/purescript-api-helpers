@@ -9,6 +9,10 @@ module Purescript.Api.Helpers (
   flattenParams,
   mkQueryString,
   routeQueryBy,
+  runDefault,
+  rD,
+  runWith,
+  rW,
   runDebug,
   urlFromReader,
   handleError,
@@ -24,7 +28,7 @@ import Control.Monad.Aff            (Aff)
 import Control.Monad.Aff.Class      (liftAff)
 import Control.Monad.Aff.Console    (log)
 import Control.Monad.Eff.Console    (CONSOLE())
-import Control.Monad.Reader.Trans   (ReaderT, lift, ask)
+import Control.Monad.Reader.Trans   (ReaderT, lift, ask, runReaderT)
 import Data.Array                   (cons)
 import Data.Either                  (Either(Left, Right))
 import Data.Foreign                 (ForeignError)
@@ -73,7 +77,7 @@ instance tupleStringQueryParam :: QueryParam (Tuple String String) where
 
 
 defaultApiOptions :: ApiOptions
-defaultApiOptions = ApiOptions {apiUrl: "//", apiPrefix: "api", apiDebug: true}
+defaultApiOptions = ApiOptions {apiUrl: "/", apiPrefix: "api", apiDebug: true}
 
 
 
@@ -96,6 +100,26 @@ mkQueryString params = "?" <> joinWith "&" params
 
 routeQueryBy :: forall qp. QueryParam qp => String -> Array String -> Array qp -> String
 routeQueryBy url paths params = route url paths <> mkQueryString (flattenParams params)
+
+
+
+runDefault :: forall m a. ReaderT ApiOptions m a -> m a
+runDefault actions = runReaderT actions defaultApiOptions
+
+
+
+rD :: forall m a. ReaderT ApiOptions m a -> m a
+rD = runDefault
+
+
+
+runWith :: forall m a. ReaderT ApiOptions m a -> ApiOptions -> m a
+runWith actions state = runReaderT actions state
+
+
+
+rW :: forall m a. ReaderT ApiOptions m a -> ApiOptions -> m a
+rW = runWith
 
 
 
