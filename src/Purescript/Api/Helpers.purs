@@ -35,7 +35,7 @@ import Network.HTTP.Affjax          (AJAX)
 import Network.HTTP.Affjax          as AJ
 import Network.HTTP.Affjax.Request  (class Requestable)
 import Network.HTTP.Affjax.Response (class Respondable, fromResponse)
-import Prelude                      (Unit, return, ($), bind, show, (++), (<>), unit, map, id)
+import Prelude                      (Unit, return, ($), bind, show, (++), (<>), unit, map, id, void)
 
 
 
@@ -99,12 +99,12 @@ routeQueryBy url paths params = route url paths <> mkQueryString (flattenParams 
 
 
 
-runDebug :: ApiEff Unit -> ApiEff Unit
+runDebug :: forall a. ApiEff a -> ApiEff Unit
 runDebug fn = do
   (ApiOptions opts) <- ask
   if opts.apiDebug
      then do
-       fn
+       void $ fn
        return unit
      else return unit
 
