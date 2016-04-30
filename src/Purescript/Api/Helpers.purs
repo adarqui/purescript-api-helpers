@@ -39,7 +39,7 @@ import Network.HTTP.Affjax          (AJAX)
 import Network.HTTP.Affjax          as AJ
 import Network.HTTP.Affjax.Request  (class Requestable)
 import Network.HTTP.Affjax.Response (class Respondable, fromResponse)
-import Prelude                      (Unit, return, ($), bind, show, (++), (<>), unit, map, id, void)
+import Prelude                      (class Show, Unit, return, ($), bind, show, (++), (<>), unit, map, id, void, show)
 
 
 
@@ -58,6 +58,12 @@ data ApiOptions = ApiOptions {
 data ApiError
   = ServerError ForeignError
   | DecodeError String
+
+
+
+instance apiErrorShow :: Show ApiError where
+  show (DecodeError err) = err
+  show (ServerError err) = show err
 
 
 
