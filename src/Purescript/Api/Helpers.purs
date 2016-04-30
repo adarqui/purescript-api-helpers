@@ -31,7 +31,7 @@ import Control.Monad.Eff.Console    (CONSOLE())
 import Control.Monad.Reader.Trans   (ReaderT, lift, ask, runReaderT)
 import Data.Array                   (cons)
 import Data.Either                  (Either(Left, Right))
-import Data.Foreign                 (ForeignError)
+import Data.Foreign                 (Foreign, ForeignError)
 import Data.Maybe                   (maybe)
 import Data.String                  (joinWith, stripSuffix)
 import Data.Tuple                   (Tuple(..), fst, snd)
@@ -39,7 +39,7 @@ import Network.HTTP.Affjax          (AJAX)
 import Network.HTTP.Affjax          as AJ
 import Network.HTTP.Affjax.Request  (class Requestable)
 import Network.HTTP.Affjax.Response (class Respondable, fromResponse)
-import Prelude                      (class Show, Unit, return, ($), bind, show, (++), (<>), unit, map, id, void, show)
+import Prelude                      (class Show, Unit, return, ($), bind, show, (++), (<>) , unit, map, id, void)
 
 
 
@@ -58,6 +58,22 @@ data ApiOptions = ApiOptions {
 data ApiError
   = ServerError ForeignError
   | DecodeError String
+
+
+
+data ApiMethod
+  = GET
+  | POST
+  | PUT
+  | DELETE
+
+
+
+instance apiMethodShow :: Show ApiMethod where
+  show GET    = "get"
+  show POST   = "post"
+  show PUT    = "put"
+  show DELETE = "delete"
 
 
 
@@ -140,6 +156,27 @@ runDebug fn = do
 
 
 
+runDebugError :: ApiMethod -> ForeignError -> String -> ApiEff Unit
+runDebugError method err url  = do
+  runDebug (liftAff $ log $ (show method <> "At: " <> url <> ", error: " ++ show err))
+  return unit
+
+
+
+runDebugSuccess :: ApiMethod -> String -> ApiEff Unit
+runDebugSuccess method url = do
+  runDebug (liftAff $ log (show method <> "At: " <> url <> ", success"))
+  return unit
+
+
+
+runDebugAnnounce :: ApiMethod -> String -> ApiEff Unit
+runDebugAnnounce method url = do
+  runDebug (liftAff $ log (show method <> "At: " <> url))
+  return unit
+
+
+
 urlFromReader :: ApiEff String
 urlFromReader = do
   (ApiOptions opts) <- ask
@@ -156,6 +193,31 @@ handleError (Right js)    = Right js
 
 
 
+-- | baseAt
+--
+-- Base function which performs logging and such.
+--
+baseAt ::
+  forall eff a b.
+  (Respondable b)
+  => ApiMethod
+  -> String
+  -> Aff ( ajax :: AJAX , console :: CONSOLE | eff) { response :: Foreign | a }
+  -> ReaderT ApiOptions (Aff ( ajax :: AJAX , console :: CONSOLE | eff)) (Either ForeignError b)
+baseAt who url fn = do
+  runDebugAnnounce who url
+  { response: response } <- lift fn
+  let r = fromResponse response
+  case r of
+         (Left err) -> do
+           runDebugError who err url
+           return $ Left err
+         (Right js) -> do
+           runDebugSuccess who url
+           return $ Right js
+
+
+
 -- | getAt
 --
 getAt ::
@@ -167,16 +229,7 @@ getAt ::
 getAt params paths = do
   url <- urlFromReader
   let url' = routeQueryBy url paths params
-  runDebug (liftAff $ log ("getAt: " <> url'))
-  { response: response } <- lift $ AJ.get url'
-  let r = fromResponse response
-  case r of
-         (Left err) -> do
-           runDebug (liftAff $ log $ ("getAt: Error: " ++ show err))
-           return $ Left err
-         (Right js) -> do
-           runDebug (liftAff $ log "getAt: Success.")
-           return $ Right js
+  baseAt GET url' (AJ.get url')
 
 
 
@@ -192,42 +245,23 @@ postAt ::
 postAt params paths body = do
   url <- urlFromReader
   let url' = routeQueryBy url paths params
-  runDebug (liftAff $ log ("postAt: " <> url'))
-  { response: response } <- lift $ AJ.post url' body
-  let r = fromResponse response
-  case r of
-         (Left err) -> do
-           runDebug (liftAff $ log $ ("postAt: Error: " ++ show err))
-           return $ Left err
-         (Right js) -> do
-           runDebug (liftAff $ log "postAt: Success.")
-           return $ Right js
-
+  baseAt POST url' (AJ.post url' body)
 
 
 
 -- | updateAt
 --
 putAt ::
-         forall a b qp.
-         (Respondable a, Requestable b, QueryParam qp)
-         => Array qp
-         -> Array String
-         -> b
-         -> ApiEff (Either ForeignError a)
+      forall a b qp.
+      (Respondable a, Requestable b, QueryParam qp)
+      => Array qp
+      -> Array String
+      -> b
+      -> ApiEff (Either ForeignError a)
 putAt params paths body = do
   url <- urlFromReader
   let url' = routeQueryBy url paths params
-  runDebug (liftAff $ log ("putAt: " <> url'))
-  { response: response } <- lift $ AJ.put url' body
-  let r = fromResponse response
-  case r of
-         (Left err) -> do
-           runDebug (liftAff $ log $ ("putAt: Error: " ++ show err))
-           return $ Left err
-         (Right js) -> do
-           runDebug (liftAff $ log "putAt: Success.")
-           return $ Right js
+  baseAt PUT url' (AJ.put url' body)
 
 
 
@@ -242,13 +276,4 @@ deleteAt ::
 deleteAt params paths = do
   url <- urlFromReader
   let url' = routeQueryBy url paths params
-  runDebug (liftAff $ log ("deleteAt: " <> url'))
-  { response: response } <- lift $ AJ.delete url'
-  let r = fromResponse response
-  case r of
-         (Left err) -> do
-           runDebug (liftAff $ log $ ("deleteAt: Error: " ++ show err))
-           return $ Left err
-         (Right unit) -> do
-           runDebug (liftAff $ log "deleteAt: Success.")
-           return $ Right unit
+  baseAt DELETE url' (AJ.delete url')
