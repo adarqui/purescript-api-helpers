@@ -1,14 +1,19 @@
 {
   "name": "purescript-api-helpers",
-  "version": "1.0.0",
-  "moduleType": [
-    "node"
-  ],
+  "description": "Some API helpers",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/adarqui/purescript-api-helpers.git"
+  },
   "ignore": [
     "**/.*",
-    "node_modules",
     "bower_components",
-    "output"
+    "node_modules",
+    "output",
+    "test",
+    "bower.json",
+    "package.json"
   ],
   "dependencies": {
     "purescript-console": "^0.1.0",
