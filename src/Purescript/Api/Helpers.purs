@@ -39,7 +39,7 @@ import Network.HTTP.Affjax          (AJAX)
 import Network.HTTP.Affjax          as AJ
 import Network.HTTP.Affjax.Request  (class Requestable)
 import Network.HTTP.Affjax.Response (class Respondable, fromResponse)
-import Prelude                      (class Show, Unit, return, ($), bind, show, (++), (<>) , unit, map, id, void)
+import Prelude                      (class Show, Unit, pure, ($), bind, show, (<>) , unit, map, id, void)
 
 
 
@@ -151,29 +151,29 @@ runDebug fn = do
   if opts.apiDebug
      then do
        void $ fn
-       return unit
-     else return unit
+       pure unit
+     else pure unit
 
 
 
 runDebugError :: ApiMethod -> ForeignError -> String -> ApiEff Unit
 runDebugError method err url  = do
-  runDebug (liftAff $ log $ (show method <> "At: " <> url <> ", error: " ++ show err))
-  return unit
+  runDebug (liftAff $ log $ (show method <> "At: " <> url <> ", error: " <> show err))
+  pure unit
 
 
 
 runDebugSuccess :: ApiMethod -> String -> ApiEff Unit
 runDebugSuccess method url = do
   runDebug (liftAff $ log (show method <> "At: " <> url <> ", success"))
-  return unit
+  pure unit
 
 
 
 runDebugAnnounce :: ApiMethod -> String -> ApiEff Unit
 runDebugAnnounce method url = do
   runDebug (liftAff $ log (show method <> "At: " <> url))
-  return unit
+  pure unit
 
 
 
@@ -183,7 +183,7 @@ urlFromReader = do
   let
     apiUrl'    = maybe opts.apiUrl id $ stripSuffix "/" opts.apiUrl
     apiPrefix' = maybe opts.apiPrefix id $ stripSuffix "/" opts.apiPrefix
-  return $ apiUrl' <> "/" <> apiPrefix'
+  pure $ apiUrl' <> "/" <> apiPrefix'
 
 
 
@@ -211,10 +211,10 @@ baseAt who url fn = do
   case r of
          (Left err) -> do
            runDebugError who err url
-           return $ Left err
+           pure $ Left err
          (Right js) -> do
            runDebugSuccess who url
-           return $ Right js
+           pure $ Right js
 
 
 
