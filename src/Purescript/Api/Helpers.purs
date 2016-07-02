@@ -55,8 +55,8 @@ data ApiOptions = ApiOptions {
 
 
 
-data ApiError
-  = ServerError ForeignError
+data ApiError b
+  = ServerError ForeignError b
   | DecodeError String
 
 
@@ -77,9 +77,9 @@ instance apiMethodShow :: Show ApiMethod where
 
 
 
-instance apiErrorShow :: Show ApiError where
-  show (DecodeError err) = err
-  show (ServerError err) = show err
+instance apiErrorShow :: Show (ApiError b) where
+  show (DecodeError err)   = err
+  show (ServerError err _) = show err
 
 
 
@@ -187,9 +187,9 @@ urlFromReader = do
 
 
 
-handleError :: forall a. Respondable a => Either ForeignError a -> Either ApiError a
-handleError (Left status) = Left $ ServerError status
-handleError (Right js)    = Right js
+handleError :: forall a b. (Respondable a, Respondable b) => Either (Tuple ForeignError b) a -> Either (ApiError b) a
+handleError (Left (Tuple status body)) = Left $ ServerError status body
+handleError (Right js)                 = Right js
 
 
 
