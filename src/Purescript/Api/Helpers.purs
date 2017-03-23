@@ -28,12 +28,16 @@ import Control.Monad.Aff            (Aff)
 import Control.Monad.Aff.Class      (liftAff)
 import Control.Monad.Aff.Console    (log)
 import Control.Monad.Eff.Console    (CONSOLE())
+import Control.Monad.Except         (runExcept)
 import Control.Monad.Reader.Trans   (ReaderT, lift, ask, runReaderT)
 import Data.Array                   (cons)
 import Data.Either                  (Either(Left, Right))
-import Data.Foreign                 (Foreign, ForeignError)
-import Data.Maybe                   (maybe)
-import Data.String                  (joinWith, stripSuffix)
+import Data.Foreign                 (Foreign, ForeignError (..))
+import Data.List                    (head)
+import Data.List.Types              (NonEmptyList (..))
+import Data.Maybe                   (Maybe (..), maybe)
+import Data.NonEmpty                (NonEmpty (..))
+import Data.String                  (joinWith, stripSuffix, Pattern (..))
 import Data.Tuple                   (Tuple(..), fst, snd)
 import Network.HTTP.Affjax          (AJAX)
 import Network.HTTP.Affjax          as AJ
@@ -181,8 +185,8 @@ urlFromReader :: ApiEff String
 urlFromReader = do
   (ApiOptions opts) <- ask
   let
-    apiUrl'    = maybe opts.apiUrl id $ stripSuffix "/" opts.apiUrl
-    apiPrefix' = maybe opts.apiPrefix id $ stripSuffix "/" opts.apiPrefix
+    apiUrl'    = maybe opts.apiUrl id $ stripSuffix (Pattern "/") opts.apiUrl
+    apiPrefix' = maybe opts.apiPrefix id $ stripSuffix (Pattern "/") opts.apiPrefix
   pure $ apiUrl' <> "/" <> apiPrefix'
 
 
@@ -203,15 +207,39 @@ baseAt ::
   => ApiMethod
   -> String
   -> Aff ( ajax :: AJAX , console :: CONSOLE | eff) { response :: Foreign | a }
-  -> ReaderT ApiOptions (Aff ( ajax :: AJAX , console :: CONSOLE | eff)) (Either ForeignError b)
+  -> ReaderT ApiOptions (Aff (ajax :: AJAX , console :: CONSOLE | eff)) (Either ForeignError b)
+{-
+baseAt :: forall t162 t164 t172.
+       ( Respondable t162
+       , Partial
+       ) => ApiMethod
+            -> String
+               -> Aff
+                    ( ajax :: AJAX
+                    , console :: CONSOLE
+                    | t164
+                    )
+                    { response :: Foreign
+                    | t172
+                    }
+                  -> ReaderT ApiOptions
+                       (Aff
+                          ( ajax :: AJAX
+                          , console :: CONSOLE
+                          | t164
+                          )
+                       )
+                       t162
+-}
 baseAt who url fn = do
   runDebugAnnounce who url
   { response: response } <- lift fn
-  let r = fromResponse response
+  let r = runExcept (fromResponse response)
   case r of
-         (Left err) -> do
-           runDebugError who err url
-           pure $ Left err
+         (Left (NonEmptyList (NonEmpty _ err))) -> do
+           case head err of
+             Just h -> pure $ Left h
+             _      -> pure $ Left (ForeignError "unknown")
          (Right js) -> do
            runDebugSuccess who url
            pure $ Right js
