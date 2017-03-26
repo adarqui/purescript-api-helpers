@@ -61,6 +61,7 @@ data ApiOptions = ApiOptions {
 
 data ApiError b
   = ServerError ForeignError b
+  | ServerErrorUnknown ForeignError
   | DecodeError String
 
 
@@ -84,6 +85,7 @@ instance apiMethodShow :: Show ApiMethod where
 instance apiErrorShow :: Show (ApiError b) where
   show (DecodeError err)   = err
   show (ServerError err _) = show err
+  show (ServerErrorUnknown err) = show err
 
 
 
@@ -208,29 +210,6 @@ baseAt ::
   -> String
   -> Aff ( ajax :: AJAX , console :: CONSOLE | eff) { response :: Foreign | a }
   -> ReaderT ApiOptions (Aff (ajax :: AJAX , console :: CONSOLE | eff)) (Either ForeignError b)
-{-
-baseAt :: forall t162 t164 t172.
-       ( Respondable t162
-       , Partial
-       ) => ApiMethod
-            -> String
-               -> Aff
-                    ( ajax :: AJAX
-                    , console :: CONSOLE
-                    | t164
-                    )
-                    { response :: Foreign
-                    | t172
-                    }
-                  -> ReaderT ApiOptions
-                       (Aff
-                          ( ajax :: AJAX
-                          , console :: CONSOLE
-                          | t164
-                          )
-                       )
-                       t162
--}
 baseAt who url fn = do
   runDebugAnnounce who url
   { response: response } <- lift fn
