@@ -16,6 +16,7 @@ module Purescript.Api.Helpers (
   runDebug,
   urlFromReader,
   handleError,
+  handleError_,
   getAt,
   postAt,
   putAt,
@@ -193,9 +194,13 @@ urlFromReader = do
 
 
 
-handleError :: forall a b. (Respondable a, Respondable b) => Either (Tuple ForeignError b) a -> Either (ApiError b) a
-handleError (Left (Tuple status body)) = Left $ ServerError status body
-handleError (Right js)                 = Right js
+handleError_ :: forall a b. (Respondable a, Respondable b) => Either (Tuple ForeignError b) a -> Either (ApiError b) a
+handleError_ (Left (Tuple status body)) = Left $ ServerError status body
+handleError_ (Right js)                 = Right js
+
+handleError :: forall a b. (Respondable a, Respondable b) => Either ForeignError a -> Either (ApiError b) a
+handleError (Left f)   = Left $ ServerErrorUnknown f
+handleError (Right js) = Right js
 
 
 
