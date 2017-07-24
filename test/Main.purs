@@ -1,9 +1,10 @@
 module Test.Main where
 
-import Prelude (Unit, const, pure, unit, bind, void, (<$>), (<<<), ($))
+import Prelude (Unit, const, pure, unit, bind, void, discard, (<$>), (<<<), ($))
 import Control.Monad.Aff
 import Control.Monad.Aff.Console (CONSOLE, log)
-import Control.Monad.Aff.Free (class Affable, fromAff)
+-- import Control.Monad.Aff.Free (class Affable, fromAff)
+import Control.Promise (fromAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Exception
 -- import Control.Monad.Eff.Console (CONSOLE, log)
