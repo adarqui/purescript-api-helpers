@@ -44,7 +44,7 @@ import Network.HTTP.Affjax          (AJAX)
 import Network.HTTP.Affjax          as AJ
 import Network.HTTP.Affjax.Request  (class Requestable)
 import Network.HTTP.Affjax.Response (class Respondable, fromResponse)
-import Prelude                      (class Show, Unit, pure, ($), bind, show, (<>) , unit, map, id, void)
+import Prelude                      (class Show, Unit, pure, ($), bind, show, (<>) , unit, map, id, void, discard)
 
 
 
@@ -194,11 +194,11 @@ urlFromReader = do
 
 
 
-handleError_ :: forall a b. (Respondable a, Respondable b) => Either (Tuple ForeignError b) a -> Either (ApiError b) a
+handleError_ :: forall a b. Respondable a => Respondable b => Either (Tuple ForeignError b) a -> Either (ApiError b) a
 handleError_ (Left (Tuple status body)) = Left $ ServerError status body
 handleError_ (Right js)                 = Right js
 
-handleError :: forall a b. (Respondable a, Respondable b) => Either ForeignError a -> Either (ApiError b) a
+handleError :: forall a b. Respondable a => Respondable b => Either ForeignError a -> Either (ApiError b) a
 handleError (Left f)   = Left $ ServerErrorUnknown f
 handleError (Right js) = Right js
 
@@ -234,7 +234,7 @@ baseAt who url fn = do
 --
 getAt ::
       forall a qp.
-      (Respondable a, QueryParam qp)
+      Respondable a => QueryParam qp
       => Array qp
       -> Array String
       -> ApiEff (Either ForeignError a)
@@ -249,7 +249,7 @@ getAt params paths = do
 --
 postAt ::
        forall a b qp.
-       (Respondable a, Requestable b, QueryParam qp)
+       Respondable a => Requestable b => QueryParam qp
        => Array qp
        -> Array String
        -> b
@@ -265,7 +265,7 @@ postAt params paths body = do
 --
 putAt ::
       forall a b qp.
-      (Respondable a, Requestable b, QueryParam qp)
+      Respondable a => Requestable b => QueryParam qp
       => Array qp
       -> Array String
       -> b
@@ -281,7 +281,7 @@ putAt params paths body = do
 --
 deleteAt ::
          forall qp.
-         (QueryParam qp)
+         QueryParam qp
          => Array qp
          -> Array String
          -> ApiEff (Either ForeignError Unit)
